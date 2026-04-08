@@ -6,7 +6,7 @@ const rateLimit = require("express-rate-limit");
 const config = require("./config");
 const { setupSocket } = require("./socket");
 const { createUser, findUserByEmail, verifyPassword, sanitizeUser, seedUsers } = require("./services/userStore");
-const { getMatchState, updateScore, resetMatch } = require("./services/scoreStore");
+const { getMatchState, updateScore, resetMatch, updateTeamNames } = require("./services/scoreStore");
 const { signToken } = require("./utils/token");
 const { requireAuth, requireAdmin } = require("./middleware/auth");
 
@@ -94,6 +94,18 @@ app.patch("/api/match/reset", requireAuth, requireAdmin, (_req, res) => {
     const state = resetMatch();
     io.emit("score:update", state);
     return res.json(state);
+});
+
+app.patch("/api/match/teams", requireAuth, requireAdmin, (req, res) => {
+    const { teamAName, teamBName } = req.body;
+
+    try {
+        const state = updateTeamNames({ teamAName, teamBName });
+        io.emit("score:update", state);
+        return res.json(state);
+    } catch (error) {
+        return res.status(400).json({ message: error.message });
+    }
 });
 
 const boot = async () => {

@@ -13,6 +13,14 @@ const defaultState = {
 
 let matchState = { ...defaultState };
 
+const sanitizeTeamName = (name, label) => {
+    const normalized = String(name || "").trim();
+    if (normalized.length < 2 || normalized.length > 40) {
+        throw new Error(`${label} must be between 2 and 40 characters`);
+    }
+    return normalized;
+};
+
 const getMatchState = () => matchState;
 
 const updateScore = ({ team, delta }) => {
@@ -37,7 +45,36 @@ const updateScore = ({ team, delta }) => {
 
 const resetMatch = () => {
     matchState = {
-        ...defaultState,
+        ...matchState,
+        teamA: {
+            ...matchState.teamA,
+            score: 0,
+        },
+        teamB: {
+            ...matchState.teamB,
+            score: 0,
+        },
+        set: 1,
+        updatedAt: new Date().toISOString(),
+    };
+
+    return matchState;
+};
+
+const updateTeamNames = ({ teamAName, teamBName }) => {
+    const nextTeamAName = sanitizeTeamName(teamAName, "Team A name");
+    const nextTeamBName = sanitizeTeamName(teamBName, "Team B name");
+
+    matchState = {
+        ...matchState,
+        teamA: {
+            ...matchState.teamA,
+            name: nextTeamAName,
+        },
+        teamB: {
+            ...matchState.teamB,
+            name: nextTeamBName,
+        },
         updatedAt: new Date().toISOString(),
     };
 
@@ -48,4 +85,5 @@ module.exports = {
     getMatchState,
     updateScore,
     resetMatch,
+    updateTeamNames,
 };
