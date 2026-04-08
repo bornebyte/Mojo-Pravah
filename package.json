@@ -1,0 +1,22 @@
+{
+  "name": "volley-score",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Live volleyball scoring app",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w server & npm run dev -w client",
+    "dev:server": "npm run dev -w server",
+    "dev:client": "npm run dev -w client",
+    "build": "npm run build -w client"
+  },
+  "keywords": [
+    "volleyball",
+    "socket-io",
+    "live-score"
+  ],
+  "author": "",
+  "license": "ISC"
+}
