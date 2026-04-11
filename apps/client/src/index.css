@@ -12,7 +12,6 @@
   --accent-strong: #e0bf00;
   --accent-ink: #2d2d2d;
   --danger: #cc2e44;
-  --success: #0e583a;
 }
 
 * {
@@ -145,14 +144,6 @@ input:focus {
 .ghost {
   background: #eeecfb;
   color: var(--ink-900);
-}
-
-.success {
-  color: #fff;
-  background: linear-gradient(135deg, #2aa876 0%, #2aa876cc 100%);
-  border-radius: 10px;
-  border: 1px solid #156d4a;
-  font: 700 0.9rem/1 "Sora", sans-serif;
 }
 
 .danger {

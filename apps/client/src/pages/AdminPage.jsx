@@ -152,9 +152,9 @@ const AdminPage = ({ user, onLogout }) => {
                 <br />
 
                 <div className="button-grid">
-                    <button disabled={pending} className="success" onClick={() => changeScore("A", 1)}>Team A +1</button>
+                    <button disabled={pending} className="cta" onClick={() => changeScore("A", 1)}>Team A +1</button>
                     <button disabled={pending} className="danger" onClick={() => changeScore("A", -1)}>Team A -1</button>
-                    <button disabled={pending} className="success" onClick={() => changeScore("B", 1)}>Team B +1</button>
+                    <button disabled={pending} className="cta" onClick={() => changeScore("B", 1)}>Team B +1</button>
                     <button disabled={pending} className="danger" onClick={() => changeScore("B", -1)}>Team B -1</button>
                 </div>
                 <button disabled={pending} className="danger" onClick={reset}>Reset Match</button>
