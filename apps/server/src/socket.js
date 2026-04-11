@@ -4,6 +4,46 @@ const Redis = require("ioredis");
 const config = require("./config");
 const { verifyToken } = require("./utils/token");
 
+const onlineByEmail = new Map();
+
+const addOnlineUser = (email, socketId) => {
+    const normalizedEmail = email.toLowerCase();
+    const socketIds = onlineByEmail.get(normalizedEmail) || new Set();
+    socketIds.add(socketId);
+    onlineByEmail.set(normalizedEmail, socketIds);
+};
+
+const removeOnlineUser = (email, socketId) => {
+    const normalizedEmail = email.toLowerCase();
+    const socketIds = onlineByEmail.get(normalizedEmail);
+    if (!socketIds) return;
+
+    socketIds.delete(socketId);
+    if (!socketIds.size) {
+        onlineByEmail.delete(normalizedEmail);
+    }
+};
+
+const getPresenceSummary = () => {
+    const users = {};
+    let totalConnections = 0;
+
+    for (const [email, socketIds] of onlineByEmail.entries()) {
+        users[email] = socketIds.size;
+        totalConnections += socketIds.size;
+    }
+
+    return {
+        onlineUsers: Object.keys(users).length,
+        totalConnections,
+        users,
+    };
+};
+
+const emitPresence = (io) => {
+    io.emit("presence:count", getPresenceSummary());
+};
+
 const setupSocket = async (httpServer) => {
     const io = new Server(httpServer, {
         cors: {
@@ -42,8 +82,12 @@ const setupSocket = async (httpServer) => {
 
     io.on("connection", (socket) => {
         console.log(`Socket connected: ${socket.id} (${socket.user.email})`);
+        addOnlineUser(socket.user.email, socket.id);
+        emitPresence(io);
 
         socket.on("disconnect", (reason) => {
+            removeOnlineUser(socket.user.email, socket.id);
+            emitPresence(io);
             console.log(`Socket disconnected: ${socket.id} (${reason})`);
         });
     });
@@ -53,4 +97,5 @@ const setupSocket = async (httpServer) => {
 
 module.exports = {
     setupSocket,
+    getPresenceSummary,
 };

@@ -56,10 +56,13 @@ const seedUsers = async () => {
     }
 };
 
+const listUsers = () => Array.from(usersByEmail.values()).map(sanitizeUser);
+
 module.exports = {
     createUser,
     findUserByEmail,
     verifyPassword,
     sanitizeUser,
+    listUsers,
     seedUsers,
 };

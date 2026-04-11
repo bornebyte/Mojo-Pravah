@@ -1,6 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { useState } from "react";
 import api from "../api";
+import BrandBanner from "../components/BrandBanner";
 
 const initialForm = { name: "", email: "", password: "" };
 
@@ -38,9 +39,13 @@ const LoginPage = ({ onAuthSuccess, user }) => {
     return (
         <main className="screen login-screen">
             <section className="panel auth-panel">
-                <p className="eyebrow">Live Volley Arena</p>
-                <h1>Real-time match scoreboard</h1>
-                <p className="subtext">Every viewer must sign in before seeing live points.</p>
+                <BrandBanner
+                    title="Mojo Pravah"
+                    subtitle="Live volleyball scoreboard for the Mojo hostel event"
+                />
+                <p className="subtext">
+                    Sign in to watch live updates or register as a new viewer.
+                </p>
 
                 <form onSubmit={onSubmit} className="auth-form">
                     {isRegistering ? (
@@ -66,12 +71,12 @@ const LoginPage = ({ onAuthSuccess, user }) => {
                         {loading ? "Please wait..." : isRegistering ? "Create viewer account" : "Sign in"}
                     </button>
                 </form>
+                <br />
 
                 <button type="button" className="ghost" onClick={() => setIsRegistering((prev) => !prev)}>
                     {isRegistering ? "Already have an account? Sign in" : "New viewer? Register now"}
                 </button>
 
-                <p className="helper">Demo admin login: admin@volley.local / Admin@123</p>
             </section>
         </main>
     );

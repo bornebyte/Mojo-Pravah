@@ -1,11 +1,11 @@
 const Scoreboard = ({ state }) => {
     if (!state) {
-        return <div className="panel">Loading score...</div>;
+        return <div className="panel scoreboard loading-card">Loading scoreboard...</div>;
     }
 
     return (
         <div className="scoreboard panel">
-            <div className="set-badge">Set {state.set}</div>
+            <div className="set-badge">Set {state.set} Live</div>
             <div className="teams">
                 <div className="team-card">
                     <h2>{state.teamA.name}</h2>

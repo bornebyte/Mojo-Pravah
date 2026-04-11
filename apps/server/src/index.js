@@ -4,8 +4,8 @@ const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const config = require("./config");
-const { setupSocket } = require("./socket");
-const { createUser, findUserByEmail, verifyPassword, sanitizeUser, seedUsers } = require("./services/userStore");
+const { setupSocket, getPresenceSummary } = require("./socket");
+const { createUser, findUserByEmail, verifyPassword, sanitizeUser, listUsers, seedUsers } = require("./services/userStore");
 const { getMatchState, updateScore, resetMatch, updateTeamNames } = require("./services/scoreStore");
 const { signToken } = require("./utils/token");
 const { requireAuth, requireAdmin } = require("./middleware/auth");
@@ -107,6 +107,24 @@ app.patch("/api/match/teams", requireAuth, requireAdmin, (req, res) => {
     } catch (error) {
         return res.status(400).json({ message: error.message });
     }
+});
+
+app.get("/api/admin/users", requireAuth, requireAdmin, (_req, res) => {
+    const users = listUsers();
+    const presence = getPresenceSummary();
+
+    const payload = users.map((user) => ({
+        ...user,
+        online: Boolean(presence.users[user.email]),
+        socketConnections: presence.users[user.email] || 0,
+    }));
+
+    return res.json({
+        users: payload,
+        onlineUsers: presence.onlineUsers,
+        totalConnections: presence.totalConnections,
+        updatedAt: new Date().toISOString(),
+    });
 });
 
 const boot = async () => {

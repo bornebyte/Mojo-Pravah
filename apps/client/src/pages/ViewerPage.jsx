@@ -4,6 +4,7 @@ import api from "../api";
 import { connectSocket, disconnectSocket } from "../socket";
 import { getAuth } from "../auth";
 import Scoreboard from "../components/Scoreboard";
+import BrandBanner from "../components/BrandBanner";
 
 const ViewerPage = ({ user, onLogout }) => {
     const [state, setState] = useState(null);
@@ -37,10 +38,8 @@ const ViewerPage = ({ user, onLogout }) => {
     return (
         <main className="screen">
             <header className="topbar">
-                <p>
-                    Welcome, <strong>{user.name}</strong>
-                </p>
-                <button className="ghost" onClick={onLogout}>Logout</button>
+                <BrandBanner title="Mojo Pravah" subtitle={`Welcome ${user.name}. Enjoy the live scoreboard.`} />
+                <button className="danger" onClick={onLogout}>Logout</button>
             </header>
             <Scoreboard state={state} />
         </main>
