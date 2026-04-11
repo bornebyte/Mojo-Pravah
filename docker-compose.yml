@@ -8,8 +8,8 @@ services:
     environment:
       NODE_ENV: production
       PORT: 4000
-    expose:
-      - "4000"
+    ports:
+      - "4000:4000"
     restart: unless-stopped
     healthcheck:
       test:
@@ -29,13 +29,10 @@ services:
       context: ./apps/client
       dockerfile: Dockerfile
       args:
-        VITE_API_BASE_URL: /api
-        VITE_SOCKET_URL: ""
-    depends_on:
-      server:
-        condition: service_healthy
+        VITE_API_BASE_URL: https://mojo-pravah-backend.sa-fet.com/api
+        VITE_SOCKET_URL: https://mojo-pravah-backend.sa-fet.com
     ports:
-      - "8080:80"
+      - "4173:80"
     restart: unless-stopped
 
   redis:

@@ -31,14 +31,33 @@ Client runs on http://localhost:5173 and server on http://localhost:4000.
    - `cp apps/server/.env.example apps/server/.env`
 2. Set strong values in `apps/server/.env`:
    - `JWT_SECRET` must be changed.
-   - `CLIENT_ORIGIN` should include your public frontend origin (for example `https://score.yourdomain.com`).
+   - `CLIENT_ORIGIN` should include your public frontend origin (for example `https://mojo-pravah.sa-fet.com`).
    - If you scale sockets across multiple server instances, set `USE_REDIS_ADAPTER=true` and verify `REDIS_URL`.
 
 ### 2) Build and start containers
 - `docker compose build`
 - `docker compose up -d`
 
-App entrypoint: http://localhost:8080
+Exposed ports:
+- Frontend container: `localhost:4173`
+- Backend container: `localhost:4000`
+
+### 2.1) Caddy reverse proxy (two domains)
+Use this Caddy configuration on your host:
+
+```caddy
+mojo-pravah.sa-fet.com {
+   reverse_proxy localhost:4173
+}
+
+mojo-pravah-backend.sa-fet.com {
+   reverse_proxy localhost:4000
+}
+```
+
+The Docker client build is configured to call:
+- API: `https://mojo-pravah-backend.sa-fet.com/api`
+- Socket.IO: `https://mojo-pravah-backend.sa-fet.com`
 
 ### 3) Stop containers
 - `docker compose down`
