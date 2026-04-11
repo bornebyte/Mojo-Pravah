@@ -152,7 +152,7 @@ input:focus {
   background: linear-gradient(135deg, #2aa876 0%, #2aa876cc 100%);
   border-radius: 10px;
   border: 1px solid #156d4a;
-  font
+  font: 700 0.9rem/1 "Sora", sans-serif;
 }
 
 .danger {
