@@ -7,12 +7,15 @@ export const connectSocket = (token) => {
 
     if (socket?.connected) return socket;
 
-    socket = io(import.meta.env.VITE_SOCKET_URL || "http://localhost:4000", {
+    const socketUrl = import.meta.env.VITE_SOCKET_URL;
+    const socketOptions = {
         auth: {
             token,
         },
         transports: ["websocket", "polling"],
-    });
+    };
+
+    socket = socketUrl ? io(socketUrl, socketOptions) : io(socketOptions);
 
     return socket;
 };

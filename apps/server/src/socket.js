@@ -7,7 +7,7 @@ const { verifyToken } = require("./utils/token");
 const setupSocket = async (httpServer) => {
     const io = new Server(httpServer, {
         cors: {
-            origin: config.clientOrigin,
+            origin: config.clientOrigins,
             methods: ["GET", "POST", "PATCH"],
         },
         transports: ["websocket", "polling"],

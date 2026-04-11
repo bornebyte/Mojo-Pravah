@@ -15,7 +15,7 @@ const app = express();
 app.use(helmet());
 app.use(
     cors({
-        origin: config.clientOrigin,
+        origin: config.clientOrigins,
         credentials: true,
     })
 );
@@ -30,6 +30,7 @@ app.use(
 );
 
 let io;
+let httpServer;
 
 app.get("/api/health", (_req, res) => {
     res.json({ status: "ok", uptime: process.uptime() });
@@ -111,13 +112,35 @@ app.patch("/api/match/teams", requireAuth, requireAdmin, (req, res) => {
 const boot = async () => {
     await seedUsers();
 
-    const httpServer = http.createServer(app);
+    httpServer = http.createServer(app);
     io = await setupSocket(httpServer);
 
     httpServer.listen(config.port, () => {
         console.log(`Server running on port ${config.port}`);
     });
 };
+
+const shutdown = (signal) => {
+    console.log(`Received ${signal}. Shutting down gracefully...`);
+
+    if (!httpServer) {
+        process.exit(0);
+        return;
+    }
+
+    httpServer.close((error) => {
+        if (error) {
+            console.error("Error while closing HTTP server", error);
+            process.exit(1);
+            return;
+        }
+
+        process.exit(0);
+    });
+};
+
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", () => shutdown("SIGTERM"));
 
 boot().catch((error) => {
     console.error("Failed to start server", error);

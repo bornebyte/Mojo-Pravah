@@ -24,6 +24,31 @@ Live volleyball scoreboard with:
 
 Client runs on http://localhost:5173 and server on http://localhost:4000.
 
+## Production with Docker
+
+### 1) Prepare environment
+1. Create server env file:
+   - `cp apps/server/.env.example apps/server/.env`
+2. Set strong values in `apps/server/.env`:
+   - `JWT_SECRET` must be changed.
+   - `CLIENT_ORIGIN` should include your public frontend origin (for example `https://score.yourdomain.com`).
+   - If you scale sockets across multiple server instances, set `USE_REDIS_ADAPTER=true` and verify `REDIS_URL`.
+
+### 2) Build and start containers
+- `docker compose build`
+- `docker compose up -d`
+
+App entrypoint: http://localhost:8080
+
+### 3) Stop containers
+- `docker compose down`
+
+### Optional Redis profile
+By default Redis is not started. To start Redis from compose as well:
+- `docker compose --profile redis up -d`
+
+When using Redis, set `USE_REDIS_ADAPTER=true` in `apps/server/.env`.
+
 ## Demo accounts
 - Admin: admin@volley.local / Admin@123
 - Viewer: viewer@volley.local / Viewer@123
