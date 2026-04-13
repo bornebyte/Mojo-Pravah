@@ -35,6 +35,14 @@ const normalizeSet = (setValue) => {
     return numericSet;
 };
 
+const normalizeLiveLabel = (liveLabel) => {
+    const normalized = String(liveLabel || "Live").trim();
+    if (normalized.length < 2 || normalized.length > 24) {
+        throw new Error("Live label must be between 2 and 24 characters");
+    }
+    return normalized;
+};
+
 const normalizeUpdatedBy = (email) => {
     const normalized = String(email || "").trim().toLowerCase();
     if (!normalized) {
@@ -50,6 +58,7 @@ const toResponse = (data) => ({
     teamA: data.teamA,
     teamB: data.teamB,
     set: data.set,
+    liveLabel: data.liveLabel || "Live",
     notes: data.notes || "",
     createdAt: data.createdAt,
     updatedAt: data.updatedAt,
@@ -80,6 +89,7 @@ const saveMatch = async ({ stage, matchState, updatedBy, notes = "" }) => {
         teamA,
         teamB,
         set: normalizeSet(matchState?.set),
+        liveLabel: normalizeLiveLabel(matchState?.liveLabel),
         notes: String(notes || "").trim().slice(0, 160),
         createdAt: now,
         updatedAt: now,
@@ -91,7 +101,7 @@ const saveMatch = async ({ stage, matchState, updatedBy, notes = "" }) => {
     return toResponse(payload);
 };
 
-const updateMatch = async (id, { stage, teamA, teamB, set, notes = "", updatedBy }) => {
+const updateMatch = async (id, { stage, teamA, teamB, set, liveLabel, notes = "", updatedBy }) => {
     const db = requireFirestore();
     const normalizedId = String(id || "").trim();
     if (!normalizedId) {
@@ -117,6 +127,7 @@ const updateMatch = async (id, { stage, teamA, teamB, set, notes = "", updatedBy
         teamB: nextTeamB,
         winner: nextTeamA.score > nextTeamB.score ? nextTeamA.name : nextTeamB.name,
         set: normalizeSet(set),
+        liveLabel: normalizeLiveLabel(liveLabel),
         notes: String(notes || "").trim().slice(0, 160),
         updatedAt: new Date().toISOString(),
         updatedBy: normalizeUpdatedBy(updatedBy),

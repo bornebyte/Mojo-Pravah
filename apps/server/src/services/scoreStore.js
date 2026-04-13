@@ -8,6 +8,7 @@ const defaultState = {
         score: 0,
     },
     set: 1,
+    liveLabel: "Live",
     updatedAt: new Date().toISOString(),
 };
 
@@ -18,6 +19,23 @@ const sanitizeTeamName = (name, label) => {
     if (normalized.length < 2 || normalized.length > 40) {
         throw new Error(`${label} must be between 2 and 40 characters`);
     }
+    return normalized;
+};
+
+const sanitizeSet = (setValue) => {
+    const parsed = Number(setValue);
+    if (!Number.isInteger(parsed) || parsed < 1 || parsed > 9) {
+        throw new Error("Set must be an integer between 1 and 9");
+    }
+    return parsed;
+};
+
+const sanitizeLiveLabel = (liveLabel) => {
+    const normalized = String(liveLabel || "").trim();
+    if (normalized.length < 2 || normalized.length > 24) {
+        throw new Error("Live label must be between 2 and 24 characters");
+    }
+
     return normalized;
 };
 
@@ -55,6 +73,7 @@ const resetMatch = () => {
             score: 0,
         },
         set: 1,
+        liveLabel: "Live",
         updatedAt: new Date().toISOString(),
     };
 
@@ -81,9 +100,24 @@ const updateTeamNames = ({ teamAName, teamBName }) => {
     return matchState;
 };
 
+const updateSetInfo = ({ set, liveLabel }) => {
+    const nextSet = sanitizeSet(set);
+    const nextLiveLabel = sanitizeLiveLabel(liveLabel);
+
+    matchState = {
+        ...matchState,
+        set: nextSet,
+        liveLabel: nextLiveLabel,
+        updatedAt: new Date().toISOString(),
+    };
+
+    return matchState;
+};
+
 module.exports = {
     getMatchState,
     updateScore,
     resetMatch,
     updateTeamNames,
+    updateSetInfo,
 };

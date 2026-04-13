@@ -104,7 +104,7 @@ const ViewerPage = ({ user, onLogout }) => {
                                         <td>{entry.teamA.name} vs {entry.teamB.name}</td>
                                         <td>{entry.teamA.score} - {entry.teamB.score}</td>
                                         <td>{entry.winner}</td>
-                                        <td>{entry.set}</td>
+                                        <td>Set {entry.set} {entry.liveLabel || "Live"}</td>
                                         <td>{new Date(entry.updatedAt).toLocaleString()}</td>
                                     </tr>
                                 ))

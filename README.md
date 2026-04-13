@@ -94,6 +94,7 @@ Viewers can also register a new account from the login page.
 - GET /api/match/history (auth required)
 - PATCH /api/match/score (admin only)
 - PATCH /api/match/reset (admin only)
+- PATCH /api/match/set-info (admin only, update "Set X Live" banner)
 - POST /api/match/history (admin only, saves current complete match)
 - PUT /api/match/history/:id (admin only, edit previous match data)
 

@@ -5,7 +5,7 @@ const Scoreboard = ({ state }) => {
 
     return (
         <div className="scoreboard panel">
-            <div className="set-badge">Set {state.set} Live</div>
+            <div className="set-badge">Set {state.set} {state.liveLabel || "Live"}</div>
             <div className="teams">
                 <div className="team-card">
                     <h2>{state.teamA.name}</h2>

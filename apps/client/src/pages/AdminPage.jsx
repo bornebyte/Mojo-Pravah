@@ -17,6 +17,7 @@ const AdminPage = ({ user, onLogout }) => {
     const [state, setState] = useState(null);
     const [pending, setPending] = useState(false);
     const [teamNames, setTeamNames] = useState({ teamAName: "", teamBName: "" });
+    const [setInfo, setSetInfo] = useState({ set: 1, liveLabel: "Live" });
     const [error, setError] = useState("");
     const [users, setUsers] = useState([]);
     const [usersLoading, setUsersLoading] = useState(false);
@@ -34,6 +35,7 @@ const AdminPage = ({ user, onLogout }) => {
     const [editForm, setEditForm] = useState({
         stage: "normal",
         set: 1,
+        liveLabel: "Live",
         teamAName: "",
         teamAScore: 0,
         teamBName: "",
@@ -100,6 +102,7 @@ const AdminPage = ({ user, onLogout }) => {
     useEffect(() => {
         if (!state) return;
         setTeamNames({ teamAName: state.teamA.name, teamBName: state.teamB.name });
+        setSetInfo({ set: state.set || 1, liveLabel: state.liveLabel || "Live" });
     }, [state]);
 
     if (!user) return <Navigate to="/login" replace />;
@@ -141,6 +144,22 @@ const AdminPage = ({ user, onLogout }) => {
             setState(data);
         } catch (requestError) {
             setError(requestError.response?.data?.message || "Failed to update team names");
+        } finally {
+            setPending(false);
+        }
+    };
+
+    const updateSetBanner = async () => {
+        setError("");
+        setPending(true);
+        try {
+            const { data } = await api.patch("/match/set-info", {
+                set: Number(setInfo.set),
+                liveLabel: setInfo.liveLabel,
+            });
+            setState(data);
+        } catch (requestError) {
+            setError(requestError.response?.data?.message || "Failed to update live set banner");
         } finally {
             setPending(false);
         }
@@ -199,6 +218,7 @@ const AdminPage = ({ user, onLogout }) => {
         setEditForm({
             stage: entry.stage,
             set: entry.set,
+            liveLabel: entry.liveLabel || "Live",
             teamAName: entry.teamA.name,
             teamAScore: entry.teamA.score,
             teamBName: entry.teamB.name,
@@ -221,6 +241,7 @@ const AdminPage = ({ user, onLogout }) => {
             await api.put(`/match/history/${editingId}`, {
                 stage: editForm.stage,
                 set: Number(editForm.set),
+                liveLabel: editForm.liveLabel,
                 teamA: {
                     name: editForm.teamAName,
                     score: Number(editForm.teamAScore),
@@ -272,6 +293,31 @@ const AdminPage = ({ user, onLogout }) => {
                     </label>
                 </div>
                 <button disabled={pending} className="ghost" onClick={updateNames}>Update Team Names</button>
+                <br />
+                <br />
+
+                <div className="name-grid">
+                    <label>
+                        Live set number
+                        <input
+                            type="number"
+                            min={1}
+                            max={9}
+                            value={setInfo.set}
+                            onChange={(event) => setSetInfo((prev) => ({ ...prev, set: event.target.value }))}
+                        />
+                    </label>
+                    <label>
+                        Live badge text
+                        <input
+                            value={setInfo.liveLabel}
+                            maxLength={24}
+                            onChange={(event) => setSetInfo((prev) => ({ ...prev, liveLabel: event.target.value }))}
+                            placeholder="Live"
+                        />
+                    </label>
+                </div>
+                <button disabled={pending} className="ghost" onClick={updateSetBanner}>Update Set Banner</button>
                 <br />
                 <br />
 
@@ -353,7 +399,7 @@ const AdminPage = ({ user, onLogout }) => {
                                         <td>{entry.teamA.name} ({entry.teamA.score})</td>
                                         <td>{entry.teamB.name} ({entry.teamB.score})</td>
                                         <td>{entry.winner}</td>
-                                        <td>{entry.set}</td>
+                                        <td>Set {entry.set} {entry.liveLabel || "Live"}</td>
                                         <td>{new Date(entry.updatedAt).toLocaleString()}</td>
                                         <td>
                                             {editingId === entry.id ? (
@@ -399,6 +445,14 @@ const AdminPage = ({ user, onLogout }) => {
                                     max={9}
                                     value={editForm.set}
                                     onChange={(event) => setEditForm((prev) => ({ ...prev, set: event.target.value }))}
+                                />
+                            </label>
+                            <label>
+                                Live label
+                                <input
+                                    value={editForm.liveLabel}
+                                    maxLength={24}
+                                    onChange={(event) => setEditForm((prev) => ({ ...prev, liveLabel: event.target.value }))}
                                 />
                             </label>
                             <label>
