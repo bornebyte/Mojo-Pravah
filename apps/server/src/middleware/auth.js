@@ -1,6 +1,7 @@
 const { verifyToken } = require("../utils/token");
+const { findUserByEmail, sanitizeUser } = require("../services/userStore");
 
-const requireAuth = (req, res, next) => {
+const requireAuth = async (req, res, next) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
         return res.status(401).json({ message: "Missing authentication token" });
@@ -8,7 +9,14 @@ const requireAuth = (req, res, next) => {
 
     const token = authHeader.slice(7);
     try {
-        req.user = verifyToken(token);
+        const decoded = verifyToken(token);
+        const user = await findUserByEmail(decoded.email);
+
+        if (!user) {
+            return res.status(401).json({ message: "User does not exist" });
+        }
+
+        req.user = sanitizeUser(user);
         return next();
     } catch {
         return res.status(401).json({ message: "Invalid or expired token" });

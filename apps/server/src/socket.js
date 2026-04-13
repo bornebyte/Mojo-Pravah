@@ -3,6 +3,7 @@ const { createAdapter } = require("@socket.io/redis-adapter");
 const Redis = require("ioredis");
 const config = require("./config");
 const { verifyToken } = require("./utils/token");
+const { findUserByEmail, sanitizeUser } = require("./services/userStore");
 
 const onlineByEmail = new Map();
 
@@ -67,14 +68,21 @@ const setupSocket = async (httpServer) => {
         console.log("Socket.IO Redis adapter enabled");
     }
 
-    io.use((socket, next) => {
+    io.use(async (socket, next) => {
         const token = socket.handshake.auth?.token;
         if (!token) {
             return next(new Error("Authentication token required"));
         }
 
         try {
-            socket.user = verifyToken(token);
+            const decoded = verifyToken(token);
+            const user = await findUserByEmail(decoded.email);
+
+            if (!user) {
+                return next(new Error("User does not exist"));
+            }
+
+            socket.user = sanitizeUser(user);
             return next();
         } catch {
             return next(new Error("Invalid token"));

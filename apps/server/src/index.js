@@ -60,7 +60,7 @@ app.post("/api/auth/login", async (req, res) => {
         return res.status(400).json({ message: "Email and password are required" });
     }
 
-    const user = findUserByEmail(email);
+    const user = await findUserByEmail(email);
     if (!user) {
         return res.status(401).json({ message: "Invalid credentials" });
     }
@@ -159,22 +159,26 @@ app.put("/api/match/history/:id", requireAuth, requireAdmin, async (req, res) =>
     }
 });
 
-app.get("/api/admin/users", requireAuth, requireAdmin, (_req, res) => {
-    const users = listUsers();
-    const presence = getPresenceSummary();
+app.get("/api/admin/users", requireAuth, requireAdmin, async (_req, res) => {
+    try {
+        const users = await listUsers();
+        const presence = getPresenceSummary();
 
-    const payload = users.map((user) => ({
-        ...user,
-        online: Boolean(presence.users[user.email]),
-        socketConnections: presence.users[user.email] || 0,
-    }));
+        const payload = users.map((user) => ({
+            ...user,
+            online: Boolean(presence.users[user.email]),
+            socketConnections: presence.users[user.email] || 0,
+        }));
 
-    return res.json({
-        users: payload,
-        onlineUsers: presence.onlineUsers,
-        totalConnections: presence.totalConnections,
-        updatedAt: new Date().toISOString(),
-    });
+        return res.json({
+            users: payload,
+            onlineUsers: presence.onlineUsers,
+            totalConnections: presence.totalConnections,
+            updatedAt: new Date().toISOString(),
+        });
+    } catch (error) {
+        return res.status(500).json({ message: error.message || "Failed to load users" });
+    }
 });
 
 const boot = async () => {
