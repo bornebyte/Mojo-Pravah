@@ -31,6 +31,13 @@ services:
       args:
         VITE_API_BASE_URL: /api
         VITE_SOCKET_URL: ""
+        VITE_FIREBASE_API_KEY: "AIzaSyDl51S4-13X9fIMfyV2FoRilcnVQOP5IDY"
+        VITE_FIREBASE_AUTH_DOMAIN: "mojo-pravah.firebaseapp.com"
+        VITE_FIREBASE_PROJECT_ID: "mojo-pravah"
+        VITE_FIREBASE_STORAGE_BUCKET: "mojo-pravah.firebasestorage.app"
+        VITE_FIREBASE_MESSAGING_SENDER_ID: "981128193473"
+        VITE_FIREBASE_APP_ID: "1:981128193473:web:926bb61321cea7ada83b40"
+        VITE_FIREBASE_MEASUREMENT_ID: "G-Q2D7234JGY"
     ports:
       - "4173:80"
     restart: unless-stopped
