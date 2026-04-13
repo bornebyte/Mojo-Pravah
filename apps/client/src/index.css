@@ -14,6 +14,7 @@
   --brand-ink: #2f2400;
   --danger: #cc2c38;
   --success: #148050;
+  --focus-ring: #0f78a8;
 }
 
 * {
@@ -30,6 +31,17 @@ body {
     radial-gradient(840px 380px at 100% 0%, rgba(113, 196, 227, 0.32) 0%, transparent 58%),
     linear-gradient(160deg, #eff9ff 0%, #eaf6ff 50%, #f6fbff 100%);
   background-attachment: fixed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 #root {
@@ -55,6 +67,10 @@ body {
   background: var(--surface);
   backdrop-filter: blur(10px);
   box-shadow: 0 18px 48px rgba(22, 55, 72, 0.16);
+}
+
+.panel:focus-within {
+  box-shadow: 0 0 0 3px rgba(15, 120, 168, 0.18), 0 18px 48px rgba(22, 55, 72, 0.16);
 }
 
 .auth-panel {
@@ -130,6 +146,13 @@ select:focus {
   box-shadow: 0 0 0 3px rgba(144, 191, 211, 0.3);
 }
 
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
 .cta,
 .ghost,
 .danger {
@@ -164,6 +187,10 @@ button:disabled {
 button:not(:disabled):hover {
   transform: translateY(-1px);
   box-shadow: 0 12px 20px rgba(20, 61, 80, 0.17);
+}
+
+button:not(:disabled):active {
+  transform: translateY(0);
 }
 
 .helper,
@@ -360,6 +387,14 @@ button:not(:disabled):hover {
   font-size: 0.92rem;
 }
 
+.users-table tbody tr:nth-child(odd) {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.users-table tbody tr:hover {
+  background: rgba(201, 234, 247, 0.35);
+}
+
 .users-table th {
   color: var(--ink-700);
   font: 700 0.74rem/1 "Chakra Petch", sans-serif;
@@ -445,6 +480,19 @@ button:not(:disabled):hover {
 
   .users-table {
     min-width: 560px;
+  }
+
+  .users-table-wrap {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 0.2rem;
+    background: rgba(255, 255, 255, 0.72);
+  }
+
+  .cta,
+  .ghost,
+  .danger {
+    width: 100%;
   }
 }
 

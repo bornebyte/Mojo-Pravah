@@ -28,6 +28,10 @@ const toSafeUser = (user) => ({
 
 const getUsersCollection = () => requireFirestore().collection(COLLECTION_NAME);
 
+const buildUserDocId = (normalizedEmail) => {
+    return `user_${crypto.createHash("sha256").update(normalizedEmail).digest("hex")}`;
+};
+
 const getUserDocByEmail = async (email) => {
     const normalizedEmail = normalizeEmail(email);
     if (!normalizedEmail) return null;
@@ -36,36 +40,6 @@ const getUserDocByEmail = async (email) => {
     if (snapshot.empty) return null;
 
     return snapshot.docs[0].data();
-};
-
-const createUser = async ({ name, email, password, role = "viewer" }) => {
-    const normalizedEmail = normalizeEmail(email);
-    if (!normalizedEmail) {
-        throw new Error("Valid email is required");
-    }
-
-    if (!password || password.length < 4) {
-        throw new Error("Password must be at least 4 characters");
-    }
-
-    const existingUser = await getUserDocByEmail(normalizedEmail);
-    if (existingUser) {
-        throw new Error("User already exists");
-    }
-
-    const plainPassword = String(password);
-    const user = {
-        id: crypto.randomUUID(),
-        name: sanitizeName(name),
-        email: normalizedEmail,
-        role: sanitizeRole(role),
-        password: plainPassword,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-    };
-
-    await getUsersCollection().doc(user.id).set(user);
-    return toSafeUser(user);
 };
 
 const findUserByEmail = async (email) => {
@@ -81,24 +55,52 @@ const upsertGoogleUser = async ({ email, name, firebaseUid, photoUrl = "" }) => 
 
     const normalizedName = sanitizeName(name || normalizedEmail.split("@")[0] || "Viewer");
     const now = new Date().toISOString();
+    const deterministicId = buildUserDocId(normalizedEmail);
+    const deterministicRef = getUsersCollection().doc(deterministicId);
+    const deterministicDoc = await deterministicRef.get();
+
+    if (deterministicDoc.exists) {
+        const existing = deterministicDoc.data();
+        const merged = {
+            ...existing,
+            id: existing.id || deterministicId,
+            email: normalizedEmail,
+            role: sanitizeRole(existing.role),
+            name: normalizedName,
+            firebaseUid: firebaseUid || existing.firebaseUid || "",
+            photoUrl: String(photoUrl || existing.photoUrl || ""),
+            authProvider: "google",
+            updatedAt: now,
+            lastLoginAt: now,
+        };
+
+        await deterministicRef.set(merged, { merge: true });
+        return toSafeUser(merged);
+    }
+
     const existingUser = await getUserDocByEmail(normalizedEmail);
 
     if (existingUser) {
         const merged = {
             ...existingUser,
+            id: existingUser.id || deterministicId,
+            role: sanitizeRole(existingUser.role),
             name: normalizedName,
             firebaseUid: firebaseUid || existingUser.firebaseUid || "",
             photoUrl: String(photoUrl || existingUser.photoUrl || ""),
+            authProvider: "google",
             updatedAt: now,
             lastLoginAt: now,
         };
 
         await getUsersCollection().doc(existingUser.id).set(merged, { merge: true });
+        // Backfill deterministic email-based doc for future conflict-free upserts.
+        await deterministicRef.set(merged, { merge: true });
         return toSafeUser(merged);
     }
 
     const user = {
-        id: crypto.randomUUID(),
+        id: deterministicId,
         name: normalizedName,
         email: normalizedEmail,
         role: "viewer",
@@ -110,11 +112,9 @@ const upsertGoogleUser = async ({ email, name, firebaseUid, photoUrl = "" }) => 
         lastLoginAt: now,
     };
 
-    await getUsersCollection().doc(user.id).set(user);
+    await deterministicRef.set(user);
     return toSafeUser(user);
 };
-
-const verifyPassword = async (user, password) => String(user.password || "") === String(password || "");
 
 const sanitizeUser = (user) => toSafeUser(user);
 
@@ -128,10 +128,8 @@ const listUsers = async () => {
 };
 
 module.exports = {
-    createUser,
     findUserByEmail,
     upsertGoogleUser,
-    verifyPassword,
     sanitizeUser,
     listUsers,
     seedUsers,

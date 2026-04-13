@@ -544,6 +544,7 @@ const AdminPage = ({ user, onLogout }) => {
                     <label>
                         Search by name or email
                         <input
+                            type="search"
                             value={userSearchQuery}
                             onChange={(event) => setUserSearchQuery(event.target.value)}
                             placeholder="Type name or email"
@@ -579,7 +580,7 @@ const AdminPage = ({ user, onLogout }) => {
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={5}>No users match the current filters. Press Refresh Users to load data.</td>
+                                    <td colSpan={5}>No users match current filters. Try another search or refresh users.</td>
                                 </tr>
                             )}
                         </tbody>

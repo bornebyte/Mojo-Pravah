@@ -66,9 +66,14 @@ app.post("/api/auth/google", async (req, res) => {
         const provider = decoded.firebase?.sign_in_provider || "";
         const email = String(decoded.email || "").trim().toLowerCase();
         const name = String(decoded.name || "").trim();
+        const emailVerified = Boolean(decoded.email_verified);
 
         if (!email) {
             return res.status(400).json({ message: "Google account email is required" });
+        }
+
+        if (!emailVerified) {
+            return res.status(403).json({ message: "Google account email must be verified" });
         }
 
         if (provider && provider !== "google.com") {
@@ -85,7 +90,9 @@ app.post("/api/auth/google", async (req, res) => {
         const token = signToken(user);
         return res.json({ user, token });
     } catch (error) {
-        return res.status(401).json({ message: error.message || "Invalid Google sign-in token" });
+        const message = error?.message || "Invalid Google sign-in token";
+        const isAuthError = /id token|token|auth|expired|invalid/i.test(message);
+        return res.status(isAuthError ? 401 : 500).json({ message });
     }
 });
 

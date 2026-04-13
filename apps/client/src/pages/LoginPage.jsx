@@ -1,13 +1,54 @@
 import { Navigate } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import api from "../api";
 import BrandBanner from "../components/BrandBanner";
 import { firebaseApp } from "../firebase";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
+import {
+    getAuth,
+    getRedirectResult,
+    GoogleAuthProvider,
+    signInWithPopup,
+    signInWithRedirect,
+    signOut,
+} from "firebase/auth";
 
 const LoginPage = ({ onAuthSuccess, user }) => {
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const resolveRedirectLogin = async () => {
+            if (!firebaseApp) return;
+
+            try {
+                setLoading(true);
+                const firebaseAuth = getAuth(firebaseApp);
+                const redirectResult = await getRedirectResult(firebaseAuth);
+
+                if (!redirectResult?.user || !isMounted) return;
+
+                const idToken = await redirectResult.user.getIdToken();
+                const { data } = await api.post("/auth/google", { idToken });
+                onAuthSuccess(data);
+                await signOut(firebaseAuth);
+            } catch (requestError) {
+                if (!isMounted) return;
+                setError(requestError.response?.data?.message || requestError.message || "Google login failed");
+            } finally {
+                if (isMounted) {
+                    setLoading(false);
+                }
+            }
+        };
+
+        resolveRedirectLogin();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [onAuthSuccess]);
 
     if (user) {
         return <Navigate to={user.role === "admin" ? "/admin" : "/viewer"} replace />;
@@ -26,7 +67,25 @@ const LoginPage = ({ onAuthSuccess, user }) => {
             provider.setCustomParameters({ prompt: "select_account" });
 
             const firebaseAuth = getAuth(firebaseApp);
-            const result = await signInWithPopup(firebaseAuth, provider);
+            let result;
+
+            try {
+                result = await signInWithPopup(firebaseAuth, provider);
+            } catch (popupError) {
+                const code = String(popupError?.code || "");
+                const shouldFallbackToRedirect =
+                    code.includes("popup-blocked") ||
+                    code.includes("popup-closed-by-user") ||
+                    code.includes("operation-not-supported-in-this-environment");
+
+                if (!shouldFallbackToRedirect) {
+                    throw popupError;
+                }
+
+                await signInWithRedirect(firebaseAuth, provider);
+                return;
+            }
+
             const idToken = await result.user.getIdToken();
 
             const { data } = await api.post("/auth/google", { idToken });
@@ -48,9 +107,10 @@ const LoginPage = ({ onAuthSuccess, user }) => {
                     title="Mojo Pravah"
                     subtitle="Live volleyball scoreboard for the Mojo hostel event"
                 />
-                <p className="subtext">
-                    Sign in with Google. First login creates your account as viewer by default.
+                <p className="helper">
+                    If popup is blocked, we automatically continue with redirect login.
                 </p>
+                <br />
 
                 <div className="auth-form">
                     {error ? <p className="error-text">{error}</p> : null}

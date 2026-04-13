@@ -88,8 +88,7 @@ When using Redis, set `USE_REDIS_ADAPTER=true` in `apps/server/.env`.
 - On next login, that user is granted admin access automatically.
 
 ## API summary
-- POST /api/auth/register
-- POST /api/auth/login
+- POST /api/auth/google
 - GET /api/match/current (auth required)
 - GET /api/match/history (auth required)
 - PATCH /api/match/score (admin only)
