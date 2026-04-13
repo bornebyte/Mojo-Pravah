@@ -73,30 +73,53 @@ const findUserByEmail = async (email) => {
     return user || null;
 };
 
+const upsertGoogleUser = async ({ email, name, firebaseUid, photoUrl = "" }) => {
+    const normalizedEmail = normalizeEmail(email);
+    if (!normalizedEmail) {
+        throw new Error("Valid email is required");
+    }
+
+    const normalizedName = sanitizeName(name || normalizedEmail.split("@")[0] || "Viewer");
+    const now = new Date().toISOString();
+    const existingUser = await getUserDocByEmail(normalizedEmail);
+
+    if (existingUser) {
+        const merged = {
+            ...existingUser,
+            name: normalizedName,
+            firebaseUid: firebaseUid || existingUser.firebaseUid || "",
+            photoUrl: String(photoUrl || existingUser.photoUrl || ""),
+            updatedAt: now,
+            lastLoginAt: now,
+        };
+
+        await getUsersCollection().doc(existingUser.id).set(merged, { merge: true });
+        return toSafeUser(merged);
+    }
+
+    const user = {
+        id: crypto.randomUUID(),
+        name: normalizedName,
+        email: normalizedEmail,
+        role: "viewer",
+        firebaseUid: String(firebaseUid || ""),
+        photoUrl: String(photoUrl || ""),
+        authProvider: "google",
+        createdAt: now,
+        updatedAt: now,
+        lastLoginAt: now,
+    };
+
+    await getUsersCollection().doc(user.id).set(user);
+    return toSafeUser(user);
+};
+
 const verifyPassword = async (user, password) => String(user.password || "") === String(password || "");
 
 const sanitizeUser = (user) => toSafeUser(user);
 
 const seedUsers = async () => {
-    const admin = await findUserByEmail("admin@mojo.com");
-    if (!admin) {
-        await createUser({
-            name: "Admin",
-            email: "admin@mojo.com",
-            password: "Admin@123",
-            role: "admin",
-        });
-    }
-
-    const viewer = await findUserByEmail("viewer@mojo.com");
-    if (!viewer) {
-        await createUser({
-            name: "Viewer",
-            email: "viewer@mojo.com",
-            password: "Viewer@123",
-            role: "viewer",
-        });
-    }
+    // No-op: users are created on first Google sign-in.
 };
 
 const listUsers = async () => {
@@ -107,6 +130,7 @@ const listUsers = async () => {
 module.exports = {
     createUser,
     findUserByEmail,
+    upsertGoogleUser,
     verifyPassword,
     sanitizeUser,
     listUsers,

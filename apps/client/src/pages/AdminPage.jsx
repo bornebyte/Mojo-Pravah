@@ -23,6 +23,8 @@ const AdminPage = ({ user, onLogout }) => {
     const [usersLoading, setUsersLoading] = useState(false);
     const [usersError, setUsersError] = useState("");
     const [usersUpdatedAt, setUsersUpdatedAt] = useState("");
+    const [userStatusFilter, setUserStatusFilter] = useState("all");
+    const [userSearchQuery, setUserSearchQuery] = useState("");
     const [presence, setPresence] = useState({ onlineUsers: 0, totalConnections: 0 });
     const [history, setHistory] = useState([]);
     const [historyError, setHistoryError] = useState("");
@@ -260,6 +262,21 @@ const AdminPage = ({ user, onLogout }) => {
             setSavingHistory(false);
         }
     };
+
+    const filteredUsers = users.filter((entry) => {
+        const statusMatch =
+            userStatusFilter === "all" ||
+            (userStatusFilter === "online" && entry.online) ||
+            (userStatusFilter === "offline" && !entry.online);
+
+        const needle = userSearchQuery.trim().toLowerCase();
+        const searchMatch =
+            !needle ||
+            String(entry.name || "").toLowerCase().includes(needle) ||
+            String(entry.email || "").toLowerCase().includes(needle);
+
+        return statusMatch && searchMatch;
+    });
 
     return (
         <main className="screen">
@@ -515,6 +532,25 @@ const AdminPage = ({ user, onLogout }) => {
                 {usersUpdatedAt ? <p className="stamp">Last manual refresh: {new Date(usersUpdatedAt).toLocaleString()}</p> : null}
                 {usersError ? <p className="error-text">{usersError}</p> : null}
 
+                <div className="history-form-grid">
+                    <label>
+                        Status filter
+                        <select value={userStatusFilter} onChange={(event) => setUserStatusFilter(event.target.value)}>
+                            <option value="all">All users</option>
+                            <option value="online">Online only</option>
+                            <option value="offline">Offline only</option>
+                        </select>
+                    </label>
+                    <label>
+                        Search by name or email
+                        <input
+                            value={userSearchQuery}
+                            onChange={(event) => setUserSearchQuery(event.target.value)}
+                            placeholder="Type name or email"
+                        />
+                    </label>
+                </div>
+
                 <div className="users-table-wrap">
                     <table className="users-table">
                         <thead>
@@ -527,8 +563,8 @@ const AdminPage = ({ user, onLogout }) => {
                             </tr>
                         </thead>
                         <tbody>
-                            {users.length ? (
-                                users.map((entry) => (
+                            {filteredUsers.length ? (
+                                filteredUsers.map((entry) => (
                                     <tr key={entry.id}>
                                         <td>{entry.name}</td>
                                         <td>{entry.email}</td>
@@ -543,7 +579,7 @@ const AdminPage = ({ user, onLogout }) => {
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={5}>No snapshot yet. Press Refresh Users to load details.</td>
+                                    <td colSpan={5}>No users match the current filters. Press Refresh Users to load data.</td>
                                 </tr>
                             )}
                         </tbody>

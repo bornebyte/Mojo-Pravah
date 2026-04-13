@@ -2,12 +2,10 @@ import { Navigate } from "react-router-dom";
 import { useState } from "react";
 import api from "../api";
 import BrandBanner from "../components/BrandBanner";
-
-const initialForm = { name: "", email: "", password: "" };
+import { firebaseApp } from "../firebase";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
 
 const LoginPage = ({ onAuthSuccess, user }) => {
-    const [isRegistering, setIsRegistering] = useState(false);
-    const [form, setForm] = useState(initialForm);
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
 
@@ -15,22 +13,29 @@ const LoginPage = ({ onAuthSuccess, user }) => {
         return <Navigate to={user.role === "admin" ? "/admin" : "/viewer"} replace />;
     }
 
-    const onChange = (event) => {
-        setForm((prev) => ({ ...prev, [event.target.name]: event.target.value }));
-    };
-
-    const onSubmit = async (event) => {
-        event.preventDefault();
+    const onGoogleLogin = async () => {
         setError("");
         setLoading(true);
 
         try {
-            const endpoint = isRegistering ? "/auth/register" : "/auth/login";
-            const payload = isRegistering ? form : { email: form.email, password: form.password };
-            const { data } = await api.post(endpoint, payload);
+            if (!firebaseApp) {
+                throw new Error("Firebase web app is not configured");
+            }
+
+            const provider = new GoogleAuthProvider();
+            provider.setCustomParameters({ prompt: "select_account" });
+
+            const firebaseAuth = getAuth(firebaseApp);
+            const result = await signInWithPopup(firebaseAuth, provider);
+            const idToken = await result.user.getIdToken();
+
+            const { data } = await api.post("/auth/google", { idToken });
             onAuthSuccess(data);
+
+            // Keep backend JWT as source of truth for app session.
+            await signOut(firebaseAuth);
         } catch (requestError) {
-            setError(requestError.response?.data?.message || "Request failed");
+            setError(requestError.response?.data?.message || requestError.message || "Google login failed");
         } finally {
             setLoading(false);
         }
@@ -44,38 +49,16 @@ const LoginPage = ({ onAuthSuccess, user }) => {
                     subtitle="Live volleyball scoreboard for the Mojo hostel event"
                 />
                 <p className="subtext">
-                    Sign in to watch live updates or register as a new viewer.
+                    Sign in with Google. First login creates your account as viewer by default.
                 </p>
 
-                <form onSubmit={onSubmit} className="auth-form">
-                    {isRegistering ? (
-                        <label>
-                            Name
-                            <input name="name" value={form.name} onChange={onChange} required placeholder="Your name" />
-                        </label>
-                    ) : null}
-
-                    <label>
-                        Email
-                        <input name="email" type="email" value={form.email} onChange={onChange} required placeholder="you@example.com" />
-                    </label>
-
-                    <label>
-                        Password
-                        <input name="password" type="password" value={form.password} onChange={onChange} required minLength={4} placeholder="At least 4 characters" />
-                    </label>
-
+                <div className="auth-form">
                     {error ? <p className="error-text">{error}</p> : null}
 
-                    <button type="submit" disabled={loading} className="cta">
-                        {loading ? "Please wait..." : isRegistering ? "Create viewer account" : "Sign in"}
+                    <button type="button" disabled={loading} className="cta" onClick={onGoogleLogin}>
+                        {loading ? "Please wait..." : "Continue with Google"}
                     </button>
-                </form>
-                <br />
-
-                <button type="button" className="ghost" onClick={() => setIsRegistering((prev) => !prev)}>
-                    {isRegistering ? "Already have an account? Sign in" : "New viewer? Register now"}
-                </button>
+                </div>
 
             </section>
         </main>

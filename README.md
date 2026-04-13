@@ -81,11 +81,11 @@ By default Redis is not started. To start Redis from compose as well:
 
 When using Redis, set `USE_REDIS_ADAPTER=true` in `apps/server/.env`.
 
-## Demo accounts
-- Admin: admin@mojo.com / Admin@123
-- Viewer: viewer@mojo.com / Viewer@123
-
-Viewers can also register a new account from the login page.
+## Authentication
+- Login uses Firebase Google sign-in only.
+- On first login, a user record is created in Firestore with default role `viewer`.
+- To make someone admin, update their `role` to `admin` in the `users` collection.
+- On next login, that user is granted admin access automatically.
 
 ## API summary
 - POST /api/auth/register

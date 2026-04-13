@@ -4,8 +4,9 @@ const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const config = require("./config");
+const { admin } = require("./firebase");
 const { setupSocket, getPresenceSummary } = require("./socket");
-const { createUser, findUserByEmail, verifyPassword, sanitizeUser, listUsers, seedUsers } = require("./services/userStore");
+const { upsertGoogleUser, listUsers, seedUsers } = require("./services/userStore");
 const { getMatchState, updateScore, resetMatch, updateTeamNames, updateSetInfo } = require("./services/scoreStore");
 const { allowedStages, listMatches, saveMatch, updateMatch } = require("./services/matchHistoryStore");
 const { signToken } = require("./utils/token");
@@ -42,40 +43,50 @@ app.get("/api/health", (_req, res) => {
     res.json({ status: "ok", uptime: process.uptime() });
 });
 
-app.post("/api/auth/register", async (req, res) => {
-    const { name, email, password } = req.body;
-    if (!name || !email || !password || password.length < 4) {
-        return res.status(400).json({ message: "Name, email and password (min 4 chars) are required" });
+app.post("/api/auth/register", (_req, res) => {
+    return res.status(410).json({ message: "Registration moved to Google sign-in" });
+});
+
+app.post("/api/auth/login", (_req, res) => {
+    return res.status(410).json({ message: "Password login is disabled. Use Google sign-in." });
+});
+
+app.post("/api/auth/google", async (req, res) => {
+    const { idToken } = req.body || {};
+    if (!idToken) {
+        return res.status(400).json({ message: "Google idToken is required" });
     }
 
     try {
-        const user = await createUser({ name, email, password, role: "viewer" });
+        if (!admin.apps.length) {
+            return res.status(500).json({ message: "Firebase Admin is not configured" });
+        }
+
+        const decoded = await admin.auth().verifyIdToken(String(idToken));
+        const provider = decoded.firebase?.sign_in_provider || "";
+        const email = String(decoded.email || "").trim().toLowerCase();
+        const name = String(decoded.name || "").trim();
+
+        if (!email) {
+            return res.status(400).json({ message: "Google account email is required" });
+        }
+
+        if (provider && provider !== "google.com") {
+            return res.status(403).json({ message: "Only Google sign-in is allowed" });
+        }
+
+        const user = await upsertGoogleUser({
+            email,
+            name: name || email,
+            firebaseUid: decoded.uid,
+            photoUrl: decoded.picture || "",
+        });
+
         const token = signToken(user);
-        return res.status(201).json({ user, token });
+        return res.json({ user, token });
     } catch (error) {
-        return res.status(409).json({ message: error.message });
+        return res.status(401).json({ message: error.message || "Invalid Google sign-in token" });
     }
-});
-
-app.post("/api/auth/login", async (req, res) => {
-    const { email, password } = req.body;
-    if (!email || !password) {
-        return res.status(400).json({ message: "Email and password are required" });
-    }
-
-    const user = await findUserByEmail(email);
-    if (!user) {
-        return res.status(401).json({ message: "Invalid credentials" });
-    }
-
-    const isValid = await verifyPassword(user, password);
-    if (!isValid) {
-        return res.status(401).json({ message: "Invalid credentials" });
-    }
-
-    const safeUser = sanitizeUser(user);
-    const token = signToken(safeUser);
-    return res.json({ user: safeUser, token });
 });
 
 app.get("/api/match/current", requireAuth, (_req, res) => {
