@@ -82,8 +82,8 @@ By default Redis is not started. To start Redis from compose as well:
 When using Redis, set `USE_REDIS_ADAPTER=true` in `apps/server/.env`.
 
 ## Demo accounts
-- Admin: admin@volley.local / Admin@123
-- Viewer: viewer@volley.local / Viewer@123
+- Admin: admin@mojo.com / Admin@123
+- Viewer: viewer@mojo.com / Viewer@123
 
 Viewers can also register a new account from the login page.
 

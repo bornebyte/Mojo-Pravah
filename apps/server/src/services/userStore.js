@@ -1,4 +1,3 @@
-const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const { requireFirestore } = require("../firebase");
 
@@ -54,13 +53,13 @@ const createUser = async ({ name, email, password, role = "viewer" }) => {
         throw new Error("User already exists");
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
+    const plainPassword = String(password);
     const user = {
         id: crypto.randomUUID(),
         name: sanitizeName(name),
         email: normalizedEmail,
         role: sanitizeRole(role),
-        passwordHash,
+        password: plainPassword,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
     };
@@ -74,26 +73,26 @@ const findUserByEmail = async (email) => {
     return user || null;
 };
 
-const verifyPassword = async (user, password) => bcrypt.compare(password, user.passwordHash);
+const verifyPassword = async (user, password) => String(user.password || "") === String(password || "");
 
 const sanitizeUser = (user) => toSafeUser(user);
 
 const seedUsers = async () => {
-    const admin = await findUserByEmail("admin@volley.local");
+    const admin = await findUserByEmail("admin@mojo.com");
     if (!admin) {
         await createUser({
             name: "Admin",
-            email: "admin@volley.local",
+            email: "admin@mojo.com",
             password: "Admin@123",
             role: "admin",
         });
     }
 
-    const viewer = await findUserByEmail("viewer@volley.local");
+    const viewer = await findUserByEmail("viewer@mojo.com");
     if (!viewer) {
         await createUser({
             name: "Viewer",
-            email: "viewer@volley.local",
+            email: "viewer@mojo.com",
             password: "Viewer@123",
             role: "viewer",
         });
