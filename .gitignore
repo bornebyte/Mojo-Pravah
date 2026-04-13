@@ -5,3 +5,4 @@ apps/client/dist/
 .env
 apps/server/.env
 apps/client/.env
+apps/server/service_account.json

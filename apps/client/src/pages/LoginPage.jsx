@@ -62,7 +62,7 @@ const LoginPage = ({ onAuthSuccess, user }) => {
 
                     <label>
                         Password
-                        <input name="password" type="password" value={form.password} onChange={onChange} required minLength={8} placeholder="At least 8 characters" />
+                        <input name="password" type="password" value={form.password} onChange={onChange} required minLength={4} placeholder="At least 4 characters" />
                     </label>
 
                     {error ? <p className="error-text">{error}</p> : null}

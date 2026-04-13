@@ -17,9 +17,17 @@ Live volleyball scoreboard with:
 2. Copy env templates:
    - `cp apps/server/.env.example apps/server/.env`
    - `cp apps/client/.env.example apps/client/.env`
-3. Start backend:
+3. Set Firebase web config in `apps/client/.env`:
+   - `VITE_FIREBASE_API_KEY`
+   - `VITE_FIREBASE_AUTH_DOMAIN`
+   - `VITE_FIREBASE_PROJECT_ID`
+   - `VITE_FIREBASE_STORAGE_BUCKET`
+   - `VITE_FIREBASE_MESSAGING_SENDER_ID`
+   - `VITE_FIREBASE_APP_ID`
+   - `VITE_FIREBASE_MEASUREMENT_ID` (optional)
+4. Start backend:
    - `npm run dev:server`
-4. Start frontend:
+5. Start frontend:
    - `npm run dev:client`
 
 Client runs on http://localhost:5173 and server on http://localhost:4000.
@@ -33,6 +41,11 @@ Client runs on http://localhost:5173 and server on http://localhost:4000.
    - `JWT_SECRET` must be changed.
    - `CLIENT_ORIGIN` should include your public frontend origin (for example `https://mojo-pravah.sa-fet.com`).
    - If you scale sockets across multiple server instances, set `USE_REDIS_ADAPTER=true` and verify `REDIS_URL`.
+   - Add Firebase Admin credentials to persist match history:
+     - `FIREBASE_PROJECT_ID`
+     - `FIREBASE_CLIENT_EMAIL`
+     - `FIREBASE_PRIVATE_KEY` (store with escaped newlines like `\\n`)
+     - `FIREBASE_DATABASE_URL` (optional)
 
 ### 2) Build and start containers
 - `docker compose build`
@@ -78,8 +91,11 @@ Viewers can also register a new account from the login page.
 - POST /api/auth/register
 - POST /api/auth/login
 - GET /api/match/current (auth required)
+- GET /api/match/history (auth required)
 - PATCH /api/match/score (admin only)
 - PATCH /api/match/reset (admin only)
+- POST /api/match/history (admin only, saves current complete match)
+- PUT /api/match/history/:id (admin only, edit previous match data)
 
 ## Scale for 2000 concurrent users
 This codebase is already prepared with Socket.IO and efficient event fan-out. For 2000 concurrent users in production, run this setup:

@@ -47,8 +47,9 @@ const emitPresence = (io) => {
 const setupSocket = async (httpServer) => {
     const io = new Server(httpServer, {
         cors: {
-            origin: config.clientOrigins,
-            methods: ["GET", "POST", "PATCH"],
+            origin: config.isCorsOriginAllowed,
+            methods: ["GET", "POST", "PUT", "PATCH", "OPTIONS"],
+            credentials: true,
         },
         transports: ["websocket", "polling"],
         pingTimeout: 20000,

@@ -6,6 +6,13 @@ import { getAuth } from "../auth";
 import Scoreboard from "../components/Scoreboard";
 import BrandBanner from "../components/BrandBanner";
 
+const formatStage = (stage) => {
+    if (!stage) return "Normal";
+    if (stage === "semi-final") return "Semi-Final";
+    if (stage === "final") return "Final";
+    return "Normal";
+};
+
 const AdminPage = ({ user, onLogout }) => {
     const [state, setState] = useState(null);
     const [pending, setPending] = useState(false);
@@ -16,6 +23,43 @@ const AdminPage = ({ user, onLogout }) => {
     const [usersError, setUsersError] = useState("");
     const [usersUpdatedAt, setUsersUpdatedAt] = useState("");
     const [presence, setPresence] = useState({ onlineUsers: 0, totalConnections: 0 });
+    const [history, setHistory] = useState([]);
+    const [historyError, setHistoryError] = useState("");
+    const [historyLoading, setHistoryLoading] = useState(false);
+    const [saveStage, setSaveStage] = useState("normal");
+    const [saveNotes, setSaveNotes] = useState("");
+    const [saveConfirm, setSaveConfirm] = useState(false);
+    const [savingHistory, setSavingHistory] = useState(false);
+    const [editingId, setEditingId] = useState("");
+    const [editForm, setEditForm] = useState({
+        stage: "normal",
+        set: 1,
+        teamAName: "",
+        teamAScore: 0,
+        teamBName: "",
+        teamBScore: 0,
+        notes: "",
+    });
+
+    const canSaveCurrentMatch = Boolean(state && state.teamA.score !== state.teamB.score);
+
+    const loadHistory = async (isSilent = false) => {
+        if (!isSilent) {
+            setHistoryLoading(true);
+        }
+        setHistoryError("");
+
+        try {
+            const { data } = await api.get("/match/history");
+            setHistory(data.matches || []);
+        } catch (requestError) {
+            setHistoryError(requestError.response?.data?.message || "Failed to load previous matches");
+        } finally {
+            if (!isSilent) {
+                setHistoryLoading(false);
+            }
+        }
+    };
 
     useEffect(() => {
         let isMounted = true;
@@ -23,6 +67,7 @@ const AdminPage = ({ user, onLogout }) => {
         const load = async () => {
             const { data } = await api.get("/match/current");
             if (isMounted) setState(data);
+            await loadHistory(true);
         };
 
         load().catch(() => onLogout());
@@ -39,11 +84,15 @@ const AdminPage = ({ user, onLogout }) => {
                 totalConnections: nextPresence.totalConnections,
             });
         });
+        socket?.on("history:update", () => {
+            loadHistory(true);
+        });
 
         return () => {
             isMounted = false;
             socket?.off("score:update");
             socket?.off("presence:count");
+            socket?.off("history:update");
             disconnectSocket();
         };
     }, [onLogout]);
@@ -116,6 +165,81 @@ const AdminPage = ({ user, onLogout }) => {
         }
     };
 
+    const saveCurrentMatch = async () => {
+        if (!canSaveCurrentMatch) {
+            setHistoryError("Match must have a winner before saving.");
+            return;
+        }
+
+        if (!saveConfirm) {
+            setHistoryError("Please confirm this result is final before saving.");
+            return;
+        }
+
+        setHistoryError("");
+        setSavingHistory(true);
+        try {
+            await api.post("/match/history", {
+                stage: saveStage,
+                notes: saveNotes,
+                isConfirmed: saveConfirm,
+            });
+            setSaveConfirm(false);
+            setSaveNotes("");
+            await loadHistory(true);
+        } catch (requestError) {
+            setHistoryError(requestError.response?.data?.message || "Failed to save current match");
+        } finally {
+            setSavingHistory(false);
+        }
+    };
+
+    const startEditing = (entry) => {
+        setEditingId(entry.id);
+        setEditForm({
+            stage: entry.stage,
+            set: entry.set,
+            teamAName: entry.teamA.name,
+            teamAScore: entry.teamA.score,
+            teamBName: entry.teamB.name,
+            teamBScore: entry.teamB.score,
+            notes: entry.notes || "",
+        });
+    };
+
+    const cancelEditing = () => {
+        setEditingId("");
+    };
+
+    const saveEdit = async () => {
+        if (!editingId) return;
+
+        setHistoryError("");
+        setSavingHistory(true);
+
+        try {
+            await api.put(`/match/history/${editingId}`, {
+                stage: editForm.stage,
+                set: Number(editForm.set),
+                teamA: {
+                    name: editForm.teamAName,
+                    score: Number(editForm.teamAScore),
+                },
+                teamB: {
+                    name: editForm.teamBName,
+                    score: Number(editForm.teamBScore),
+                },
+                notes: editForm.notes,
+            });
+            setEditingId("");
+            await loadHistory(true);
+        } catch (requestError) {
+            setHistoryError(requestError.response?.data?.message || "Failed to update match record");
+        } finally {
+            setSavingHistory(false);
+        }
+    };
+
     return (
         <main className="screen">
             <header className="topbar">
@@ -159,6 +283,168 @@ const AdminPage = ({ user, onLogout }) => {
                 </div>
                 <button disabled={pending} className="danger" onClick={reset}>Reset Match</button>
                 {error ? <p className="error-text">{error}</p> : null}
+            </section>
+
+            <section className="panel controls history-panel">
+                <h3>Save Completed Match</h3>
+                <p className="helper">When any team wins, save the complete result to Firebase with match type.</p>
+
+                <div className="history-form-grid">
+                    <label>
+                        Match type
+                        <select value={saveStage} onChange={(event) => setSaveStage(event.target.value)}>
+                            <option value="normal">Normal</option>
+                            <option value="semi-final">Semi-Final</option>
+                            <option value="final">Final</option>
+                        </select>
+                    </label>
+
+                    <label>
+                        Notes (optional)
+                        <input
+                            value={saveNotes}
+                            onChange={(event) => setSaveNotes(event.target.value)}
+                            placeholder="Example: Match 3, court-2"
+                            maxLength={160}
+                        />
+                    </label>
+                </div>
+
+                <label className="checkbox-row">
+                    <input type="checkbox" checked={saveConfirm} onChange={(event) => setSaveConfirm(event.target.checked)} />
+                    <span>I confirm this entry is final and ready to save</span>
+                </label>
+
+                <button className="cta" disabled={savingHistory || !canSaveCurrentMatch} onClick={saveCurrentMatch}>
+                    {savingHistory ? "Saving..." : "Save Current Match"}
+                </button>
+                {!canSaveCurrentMatch ? <p className="helper">A winner is required before saving.</p> : null}
+                {historyError ? <p className="error-text">{historyError}</p> : null}
+            </section>
+
+            <section className="panel users-panel history-results-panel">
+                <div className="users-header">
+                    <h3>Previous Match Records</h3>
+                    <button className="ghost" onClick={() => loadHistory()} disabled={historyLoading}>
+                        {historyLoading ? "Refreshing..." : "Refresh History"}
+                    </button>
+                </div>
+
+                <p className="helper">You can edit old records here if there was any wrong data entry.</p>
+
+                <div className="users-table-wrap">
+                    <table className="users-table history-table">
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Team A</th>
+                                <th>Team B</th>
+                                <th>Winner</th>
+                                <th>Set</th>
+                                <th>Updated</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {history.length ? (
+                                history.map((entry) => (
+                                    <tr key={entry.id}>
+                                        <td>{formatStage(entry.stage)}</td>
+                                        <td>{entry.teamA.name} ({entry.teamA.score})</td>
+                                        <td>{entry.teamB.name} ({entry.teamB.score})</td>
+                                        <td>{entry.winner}</td>
+                                        <td>{entry.set}</td>
+                                        <td>{new Date(entry.updatedAt).toLocaleString()}</td>
+                                        <td>
+                                            {editingId === entry.id ? (
+                                                <div className="table-actions">
+                                                    <button className="cta" onClick={saveEdit} disabled={savingHistory}>Save</button>
+                                                    <button className="ghost" onClick={cancelEditing} disabled={savingHistory}>Cancel</button>
+                                                </div>
+                                            ) : (
+                                                <button className="ghost" onClick={() => startEditing(entry)}>Edit</button>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan={7}>No previous matches saved yet.</td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+
+                {editingId ? (
+                    <div className="edit-card">
+                        <h4>Edit Match Record</h4>
+                        <div className="history-form-grid">
+                            <label>
+                                Match type
+                                <select
+                                    value={editForm.stage}
+                                    onChange={(event) => setEditForm((prev) => ({ ...prev, stage: event.target.value }))}
+                                >
+                                    <option value="normal">Normal</option>
+                                    <option value="semi-final">Semi-Final</option>
+                                    <option value="final">Final</option>
+                                </select>
+                            </label>
+                            <label>
+                                Set
+                                <input
+                                    type="number"
+                                    min={1}
+                                    max={9}
+                                    value={editForm.set}
+                                    onChange={(event) => setEditForm((prev) => ({ ...prev, set: event.target.value }))}
+                                />
+                            </label>
+                            <label>
+                                Team A name
+                                <input
+                                    value={editForm.teamAName}
+                                    onChange={(event) => setEditForm((prev) => ({ ...prev, teamAName: event.target.value }))}
+                                />
+                            </label>
+                            <label>
+                                Team A score
+                                <input
+                                    type="number"
+                                    min={0}
+                                    value={editForm.teamAScore}
+                                    onChange={(event) => setEditForm((prev) => ({ ...prev, teamAScore: event.target.value }))}
+                                />
+                            </label>
+                            <label>
+                                Team B name
+                                <input
+                                    value={editForm.teamBName}
+                                    onChange={(event) => setEditForm((prev) => ({ ...prev, teamBName: event.target.value }))}
+                                />
+                            </label>
+                            <label>
+                                Team B score
+                                <input
+                                    type="number"
+                                    min={0}
+                                    value={editForm.teamBScore}
+                                    onChange={(event) => setEditForm((prev) => ({ ...prev, teamBScore: event.target.value }))}
+                                />
+                            </label>
+                        </div>
+
+                        <label>
+                            Notes
+                            <input
+                                value={editForm.notes}
+                                onChange={(event) => setEditForm((prev) => ({ ...prev, notes: event.target.value }))}
+                                maxLength={160}
+                            />
+                        </label>
+                    </div>
+                ) : null}
             </section>
 
             <section className="panel users-panel">

@@ -7,6 +7,7 @@ const config = require("./config");
 const { setupSocket, getPresenceSummary } = require("./socket");
 const { createUser, findUserByEmail, verifyPassword, sanitizeUser, listUsers, seedUsers } = require("./services/userStore");
 const { getMatchState, updateScore, resetMatch, updateTeamNames } = require("./services/scoreStore");
+const { allowedStages, listMatches, saveMatch, updateMatch } = require("./services/matchHistoryStore");
 const { signToken } = require("./utils/token");
 const { requireAuth, requireAdmin } = require("./middleware/auth");
 
@@ -15,8 +16,10 @@ const app = express();
 app.use(helmet());
 app.use(
     cors({
-        origin: config.clientOrigins,
+        origin: config.isCorsOriginAllowed,
         credentials: true,
+        methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allowedHeaders: ["Content-Type", "Authorization"],
     })
 );
 app.use(express.json());
@@ -38,8 +41,8 @@ app.get("/api/health", (_req, res) => {
 
 app.post("/api/auth/register", async (req, res) => {
     const { name, email, password } = req.body;
-    if (!name || !email || !password || password.length < 8) {
-        return res.status(400).json({ message: "Name, email and password (min 8 chars) are required" });
+    if (!name || !email || !password || password.length < 4) {
+        return res.status(400).json({ message: "Name, email and password (min 4 chars) are required" });
     }
 
     try {
@@ -76,6 +79,15 @@ app.get("/api/match/current", requireAuth, (_req, res) => {
     return res.json(getMatchState());
 });
 
+app.get("/api/match/history", requireAuth, async (_req, res) => {
+    try {
+        const matches = await listMatches();
+        return res.json({ matches, allowedStages });
+    } catch (error) {
+        return res.status(500).json({ message: error.message || "Failed to load match history" });
+    }
+});
+
 app.patch("/api/match/score", requireAuth, requireAdmin, (req, res) => {
     const { team, delta } = req.body;
     if ((team !== "A" && team !== "B") || ![1, -1].includes(delta)) {
@@ -106,6 +118,44 @@ app.patch("/api/match/teams", requireAuth, requireAdmin, (req, res) => {
         return res.json(state);
     } catch (error) {
         return res.status(400).json({ message: error.message });
+    }
+});
+
+app.post("/api/match/history", requireAuth, requireAdmin, async (req, res) => {
+    const { stage, isConfirmed, notes = "" } = req.body;
+    if (!isConfirmed) {
+        return res.status(400).json({ message: "Please confirm match finalization before saving" });
+    }
+
+    try {
+        const payload = await saveMatch({
+            stage,
+            notes,
+            matchState: getMatchState(),
+            updatedBy: req.user.email,
+        });
+
+        io.emit("history:update");
+        return res.status(201).json(payload);
+    } catch (error) {
+        return res.status(400).json({ message: error.message || "Failed to save match" });
+    }
+});
+
+app.put("/api/match/history/:id", requireAuth, requireAdmin, async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const payload = await updateMatch(id, {
+            ...req.body,
+            updatedBy: req.user.email,
+        });
+
+        io.emit("history:update");
+        return res.json(payload);
+    } catch (error) {
+        const notFound = error.message === "Match record not found";
+        return res.status(notFound ? 404 : 400).json({ message: error.message || "Failed to update match" });
     }
 });
 
