@@ -82,7 +82,9 @@ const setupSocket = async (httpServer) => {
                 return next(new Error("User does not exist"));
             }
 
-            socket.user = sanitizeUser(user);
+            const safeUser = sanitizeUser(user);
+            socket.user = safeUser;
+            socket.data.user = safeUser;
             return next();
         } catch {
             return next(new Error("Invalid token"));
@@ -90,12 +92,22 @@ const setupSocket = async (httpServer) => {
     });
 
     io.on("connection", (socket) => {
-        console.log(`Socket connected: ${socket.id} (${socket.user.email})`);
-        addOnlineUser(socket.user.email, socket.id);
+        const user = socket.user || socket.data?.user;
+        if (!user?.email) {
+            console.warn(`Socket ${socket.id} connected without auth context; disconnecting`);
+            socket.disconnect(true);
+            return;
+        }
+
+        socket.user = user;
+        console.log(`Socket connected: ${socket.id} (${user.email})`);
+        addOnlineUser(user.email, socket.id);
         emitPresence(io);
 
         socket.on("disconnect", (reason) => {
-            removeOnlineUser(socket.user.email, socket.id);
+            if (socket.user?.email) {
+                removeOnlineUser(socket.user.email, socket.id);
+            }
             emitPresence(io);
             console.log(`Socket disconnected: ${socket.id} (${reason})`);
         });

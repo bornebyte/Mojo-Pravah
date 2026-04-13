@@ -13,6 +13,9 @@ const { requireAuth, requireAdmin } = require("./middleware/auth");
 
 const app = express();
 
+// Behind Caddy/Cloudflare in production, trust first proxy hop for real client IP.
+app.set("trust proxy", config.isProduction ? 1 : false);
+
 app.use(helmet());
 app.use(
     cors({
