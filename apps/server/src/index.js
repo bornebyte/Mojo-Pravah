@@ -9,6 +9,7 @@ const { setupSocket, getPresenceSummary } = require("./socket");
 const { upsertGoogleUser, listUsers, seedUsers } = require("./services/userStore");
 const { getMatchState, updateScore, resetMatch, updateTeamNames, updateSetInfo } = require("./services/scoreStore");
 const { allowedStages, listMatches, saveMatch, updateMatch } = require("./services/matchHistoryStore");
+const { saveFeedback } = require("./services/feedbackStore");
 const { signToken } = require("./utils/token");
 const { requireAuth, requireAdmin } = require("./middleware/auth");
 
@@ -211,6 +212,29 @@ app.get("/api/admin/users", requireAuth, requireAdmin, async (_req, res) => {
         });
     } catch (error) {
         return res.status(500).json({ message: error.message || "Failed to load users" });
+    }
+});
+
+app.post("/api/feedback", requireAuth, async (req, res) => {
+    const { rating, comment, page } = req.body || {};
+
+    try {
+        const result = await saveFeedback({
+            rating,
+            comment,
+            page,
+            user: req.user,
+            ip: req.ip,
+            userAgent: req.get("user-agent"),
+        });
+
+        return res.status(201).json({
+            message: "Feedback submitted",
+            id: result.id,
+            createdAt: result.createdAt,
+        });
+    } catch (error) {
+        return res.status(400).json({ message: error.message || "Failed to save feedback" });
     }
 });
 

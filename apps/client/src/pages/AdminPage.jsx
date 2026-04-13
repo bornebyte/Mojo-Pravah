@@ -5,6 +5,8 @@ import { connectSocket, disconnectSocket } from "../socket";
 import { getAuth } from "../auth";
 import Scoreboard from "../components/Scoreboard";
 import BrandBanner from "../components/BrandBanner";
+import DeveloperInfo from "../components/DeveloperInfo";
+import FeedbackForm from "../components/FeedbackForm";
 
 const formatStage = (stage) => {
     if (!stage) return "Normal";
@@ -587,6 +589,9 @@ const AdminPage = ({ user, onLogout }) => {
                     </table>
                 </div>
             </section>
+
+            <DeveloperInfo />
+            <FeedbackForm page="admin" />
         </main>
     );
 };

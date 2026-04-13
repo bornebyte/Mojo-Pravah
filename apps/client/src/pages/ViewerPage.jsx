@@ -5,6 +5,8 @@ import { connectSocket, disconnectSocket } from "../socket";
 import { getAuth } from "../auth";
 import Scoreboard from "../components/Scoreboard";
 import BrandBanner from "../components/BrandBanner";
+import DeveloperInfo from "../components/DeveloperInfo";
+import FeedbackForm from "../components/FeedbackForm";
 
 const formatStage = (stage) => {
     if (stage === "semi-final") return "Semi-Final";
@@ -117,6 +119,9 @@ const ViewerPage = ({ user, onLogout }) => {
                     </table>
                 </div>
             </section>
+
+            <DeveloperInfo />
+            <FeedbackForm page="viewer" />
         </main>
     );
 };
