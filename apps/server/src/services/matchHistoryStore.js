@@ -1,5 +1,5 @@
 const crypto = require("crypto");
-const { requireFirestore } = require("../../firebase");
+const { requireFirestore } = require("../firebase");
 
 const COLLECTION_NAME = "match_history";
 const allowedStages = new Set(["normal", "semi-final", "final"]);

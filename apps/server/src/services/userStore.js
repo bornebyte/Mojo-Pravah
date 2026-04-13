@@ -1,6 +1,6 @@
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
-const { requireFirestore } = require("../../firebase");
+const { requireFirestore } = require("../firebase");
 
 const COLLECTION_NAME = "users";
 
